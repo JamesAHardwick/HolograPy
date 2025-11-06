@@ -1,6 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 from PIL import Image, ImageDraw, ImageFont
+from scipy.ndimage import gaussian_filter
 import os
 
 def compute_grid_2d(origin, v1, v2, spacing_x, spacing_y, n_x, n_y):
@@ -200,64 +201,72 @@ def PM_forward_model(eval_points, tran_points, tran_normals, k, A=0.17, V=20, d=
     return H
 
 
-def wgs(A, b, K=200, incoming_field=None):
-    '''
-    Weighted Gerchberg–Saxton (WGS) solver with optional incoming field.
+def wgs(A, b, K=500, incoming_field=None, smooth_sigma=None, alpha=0.8):
+    """
+    Weighted Gerchberg–Saxton (WGS) solver optimized for letters or structured targets.
 
     Parameters
     ----------
     A : np.ndarray, shape (M, N), complex
         Forward model matrix mapping the hologram plane to the target plane.
-        Typically M = number of pixels in target plane, N = number of pixels in hologram plane.
     b : np.ndarray, shape (M, 1) or (M,), complex
         Target complex field (desired amplitude and phase in the target plane).
     K : int, optional
-        Number of iterations (default 200).
+        Number of iterations (default 500).
     incoming_field : np.ndarray, shape (N, 1) or (N,), complex, optional
-        Incoming complex field at the hologram plane.
-        If None, a uniform plane wave is assumed (all ones).
+        Incoming complex field at the hologram plane. Defaults to uniform plane wave.
+    smooth_sigma : float or None, optional
+        Standard deviation for Gaussian smoothing of the target amplitude.
+        If None or 0, no smoothing is applied. 1 = maximum smoothing (good for letters).
+    alpha : float, optional
+        Relaxation parameter for hologram update (0 < alpha <= 1).
 
     Returns
     -------
     x : np.ndarray, shape (N, 1), complex
-        Final hologram field: same amplitude as incoming_field, updated phase.
+        Final hologram field: same amplitude as incoming_field, optimized phase.
     y : np.ndarray, shape (M, 1), complex
-        Final forward propagated field: A @ x.
-    '''
+        Forward propagated field in the target plane.
+    """
     M, N = A.shape
-
-    # Ensure column vectors
     b = b.reshape((M, 1))
-    
+
+    # Incoming field
     if incoming_field is None:
         inc = np.ones((N, 1), dtype=np.complex128)
     else:
         inc = incoming_field.reshape((N, 1))
 
     AT = np.conj(A).T
-    b0 = b.copy()
     x = inc.copy()
 
+    # Create mask for letter region (non-zero amplitude)
+    mask = (np.abs(b) > 0).astype(np.float32)
+
+    # Optionally smooth mask
+    if smooth_sigma and smooth_sigma > 0:
+        mask = gaussian_filter(mask, sigma=smooth_sigma)
+
+    # Flattened target amplitude
+    target_amplitude = mask / np.max(mask)
+
     for _ in range(K):
-        
         # Forward propagation
-        y = A @ x
+        y = A @ x  # preserves amplitude of incoming field
 
-        # Update target amplitude (weighted)
-        b_proj = b0 * (b / np.abs(y))
-        b_proj = b_proj / np.max(np.abs(b_proj))  # normalize
+        # Replace amplitude in target plane with flattened amplitude in letter region
+        p = target_amplitude * (y / np.abs(y))
 
-        # Keep phase from y, apply target amplitude
-        p = b_proj * (y / np.abs(y))
-
-        # Backward propagate
+        # Backward propagation
         r = AT @ p
 
-        # Update hologram: preserve incoming amplitude, apply new phase
-        x = inc * (r / np.abs(r))
+        # Update hologram with relaxation, preserve incoming amplitude
+        x_phase = r / np.abs(r)
+        x = inc * ((1 - alpha) * (x / np.abs(x)) + alpha * x_phase)
+        x = x / np.max(np.abs(x)) * np.abs(inc)  # preserve amplitude scale of incoming field
 
-        # Update b for next iteration
-        b = b_proj
+    # Final forward propagation
+    y = A @ x
 
     return x, y
 
