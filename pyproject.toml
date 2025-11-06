@@ -1,3 +1,17 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "holograPy"            # or your chosen name
+version = "0.1.0"             # set current version
+description = "Lightweight Python library for 3D holography and acoustic simulation."
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+authors = [
+  { name = "James A. Hardwick"}
+]
+dependencies = [
+  # list runtime dependencies (if any)
+]
+requires-python = ">=3.7"     # or whichever minimum you support
