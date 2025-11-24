@@ -147,7 +147,6 @@ def GF_forward_model(eval_points, modulator_points, modulator_normals, modulator
     return H
 
 
-
 def PM_forward_model(eval_points, tran_points, tran_normals, k, A=0.17, V=20, d=9/1000):
     """ 
     Fully vectorised piston model for an array of transducer normals.
@@ -502,7 +501,7 @@ def plot_plane_edges_plotly(fig, grid, n_cols=None, color='black', line_width=4,
     return fig
 
 
-def vector_arrow(fig, start, vector, length=None, thickness=5, color='red', tip_size=0.1, label='normal vector'):
+def plot_vector_arrow_plotly(fig, start, vector, length=None, thickness=5, color='red', tip_size=0.1, label='normal vector'):
     """
     Add a 3D arrow to a Plotly figure using a start point and a direction vector.
 
