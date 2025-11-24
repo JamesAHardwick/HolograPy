@@ -15,7 +15,11 @@ from .utils import (
     char_to_array,
     plot_transducers_plotly,
     plot_plane_points_plotly,
-    plot_plane_edges_plotly
+    plot_plane_edges_plotly,
+    plot_vector_arrow_plotly,
+    transformation_matrix,
+    rotate_vector_in_plane,
+    make_transformation
 )
 
 __all__ = [
@@ -24,7 +28,14 @@ __all__ = [
     "GF_forward_model",
     "PM_forward_model",
     "wgs",
-    "target_builder_chars",
+    "char_to_array",
+    "plot_transducers_plotly",
+    "plot_plane_points_plotly",
+    "plot_plane_edges_plotly",
+    "plot_vector_arrow_plotly",
+    "transformation_matrix",
+    "rotate_vector_in_plane",
+    "make_transformation"
 ]
 
 __version__ = "0.1.0"
