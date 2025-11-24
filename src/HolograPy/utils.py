@@ -500,3 +500,204 @@ def plot_plane_edges_plotly(fig, grid, n_cols=None, color='black', line_width=4,
     ))
 
     return fig
+
+
+def vector_arrow(fig, start, vector, length=None, thickness=5, color='red', tip_size=0.1, label='normal vector'):
+    """
+    Add a 3D arrow to a Plotly figure using a start point and a direction vector.
+
+    Parameters:
+    - fig : plotly.graph_objects.Figure
+        The 3D figure to add the arrow to.
+    - start : array-like of shape (3,)
+        Starting point of the arrow.
+    - vector : array-like of shape (3,)
+        3D vector describing the direction of the arrow.
+    - length : float or None
+        Length of the arrow. If None, uses the magnitude of 'vector'.
+    - thickness : float
+        Line width of the arrow shaft.
+    - color : str
+        Color of the arrow.
+    - tip_size : float
+        Size of the arrowhead (cone).
+    - label : str
+        Label for the arrow.
+    """
+    start = np.array(start)
+    vector = np.array(vector)
+
+    # Scale vector if length is specified
+    if length is not None:
+        unit_vector = vector / np.linalg.norm(vector)
+        vector = unit_vector * length
+
+    end = start + vector  # compute tip
+
+    # Shaft of arrow
+    fig.add_trace(go.Scatter3d(
+        x=[start[0], end[0]],
+        y=[start[1], end[1]],
+        z=[start[2], end[2]],
+        mode='lines',
+        line=dict(color=color, width=thickness),
+        name=label
+    ))
+
+    # Arrowhead (cone) at the tip
+    fig.add_trace(go.Cone(
+        x=[end[0]], y=[end[1]], z=[end[2]],
+        u=[vector[0]], v=[vector[1]], w=[vector[2]],
+        sizemode='absolute',
+        sizeref=tip_size,
+        anchor="tip",
+        showscale=False,
+        colorscale=[[0, color], [1, color]],
+        name=label
+    ))
+
+
+def transformation_matrix(tx, ty, tz, rx, ry, rz):
+    """
+    Create a 4×4 homogeneous transformation matrix using:
+    - translation (tx, ty, tz)
+    - Euler rotations (rx, ry, rz), assumed to be **in radians**
+      following the right-hand rule.
+
+    Rotation order:
+        Rx is applied first,
+        then Ry,
+        then Rz
+    because the combined matrix is built as:  R = Rz @ Ry @ Rx
+
+    Final transform order:
+        translation is applied first,
+        then rotation,
+    because the full matrix is: M = T @ R
+    and points are expected as row vectors multiplied like: P @ M.T
+    """
+
+    # -----------------------------
+    # 1. Translation matrix
+    # -----------------------------
+    T = np.array([
+        [1, 0, 0, tx],
+        [0, 1, 0, ty],
+        [0, 0, 1, tz],
+        [0, 0, 0,  1]
+    ], dtype=float)
+
+    # -----------------------------
+    # 2. Compute cosines & sines
+    #    Angles MUST be in radians.
+    # -----------------------------
+    cx, cy, cz = np.cos([rx, ry, rz])
+    sx, sy, sz = np.sin([rx, ry, rz])
+
+    # -----------------------------
+    # 3. Rotation about X axis (Rx)
+    # -----------------------------
+    Rx = np.array([
+        [1,  0,   0, 0],
+        [0,  cx,  sx, 0],
+        [0, -sx,  cx, 0],
+        [0,   0,   0, 1]
+    ], dtype=float)
+
+    # -----------------------------
+    # 4. Rotation about Y axis (Ry)
+    # -----------------------------
+    Ry = np.array([
+        [ cy, 0, -sy, 0],
+        [  0, 1,   0, 0],
+        [ sy, 0,  cy, 0],
+        [  0, 0,   0, 1]
+    ], dtype=float)
+
+    # -----------------------------
+    # 5. Rotation about Z axis (Rz)
+    # -----------------------------
+    Rz = np.array([
+        [ cz,  sz, 0, 0],
+        [-sz,  cz, 0, 0],
+        [  0,   0, 1, 0],
+        [  0,   0, 0, 1]
+    ], dtype=float)
+
+    # -----------------------------
+    # 6. Combined rotation
+    #    Applied in order: X → Y → Z
+    #    Because matrix multiplication is right-to-left.
+    # -----------------------------
+    R = Rz @ Ry @ Rx
+
+    # -----------------------------
+    # 7. Combine translation (first)
+    #    and rotation (after)
+    # -----------------------------
+    M = T @ R
+
+    return M
+
+
+def make_transformation(points, tm):
+    
+    # convert to homogeneous coordinates
+    ones = np.ones((points.shape[0], 1), dtype=points.dtype)
+    points_h = np.concatenate([points, ones], axis=1) # shape (256, 4)
+
+    # apply transform
+    transformed_points_h = points_h @ tm.T # shape (256, 4)
+    
+    # convert to 3D coords
+    w = transformed_points_h[:, 3:4] # shape (256, 1)
+    
+    # Divide by w:
+    transformed_points = transformed_points_h[:, :3] / w
+
+    return transformed_points # result shape (256, 3)
+
+
+def rotate_vector_in_plane(v, angle_deg, plane):
+    """
+    Rotate a 3D vector v by a given angle (in degrees)
+    within a specified plane: 'xy', 'xz', or 'yz'.
+    
+    v: (3,) numpy array-like
+    angle_deg: rotation angle in degrees
+    plane: which plane to rotate in ('xy', 'xz', 'yz')
+
+    Returns:
+        Rotated 3D vector as a numpy array of shape (3,)
+    """
+    v = np.asarray(v, dtype=float)
+    theta = np.deg2rad(angle_deg)
+
+    c = np.cos(theta)
+    s = np.sin(theta)
+
+    if plane == 'xy':
+        # rotation in XY plane = rotation about Z axis
+        R = np.array([
+            [c, -s, 0],
+            [s,  c, 0],
+            [0,  0, 1]
+        ])
+    elif plane == 'xz':
+        # rotation in XZ plane = rotation about Y axis
+        R = np.array([
+            [ c, 0, -s],
+            [ 0, 1,  0],
+            [ s, 0,  c]
+        ])
+    elif plane == 'yz':
+        # rotation in YZ plane = rotation about X axis
+        R = np.array([
+            [1,  0,  0],
+            [0,  c, -s],
+            [0,  s,  c]
+        ])
+    else:
+        raise ValueError("plane must be one of: 'xy', 'xz', 'yz'")
+
+    return R @ v
