@@ -1,13 +1,29 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "holograPy"
+name = "HolograPy"
 version = "0.1.0"
-description = "Lightweight Python library for 3D holography and acoustic simulation."
+description = "A holography simulation and visualization package"
 readme = "README.md"
-license = { file = "LICENSE.txt" }
+requires-python = ">=3.8"
+
 authors = [
-  { name = "James A. Hardwick"}
+    { name = "James Hardwick" }
+]
+
+license = "MIT"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+    "numpy",
+    "Pillow",
+    "plotly",
 ]
