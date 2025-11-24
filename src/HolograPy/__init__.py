@@ -18,8 +18,8 @@ from .utils import (
     plot_plane_edges_plotly,
     plot_vector_arrow_plotly,
     transformation_matrix,
+    make_transformation,
     rotate_vector_in_plane,
-    make_transformation
 )
 
 __all__ = [
@@ -34,8 +34,8 @@ __all__ = [
     "plot_plane_edges_plotly",
     "plot_vector_arrow_plotly",
     "transformation_matrix",
-    "rotate_vector_in_plane",
-    "make_transformation"
+    "make_transformation",
+    "rotate_vector_in_plane"
 ]
 
 __version__ = "0.1.0"
