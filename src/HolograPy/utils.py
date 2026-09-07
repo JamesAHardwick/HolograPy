@@ -29,7 +29,7 @@ def compute_grid_2d(origin, v1, v2, spacing_x, spacing_y, n_x, n_y):
     points = []
     for i in range(n_x):
         for j in range(n_y):
-            point = origin + j * spacing_x * v1_unit + i * spacing_y * v2_unit
+            point = origin + i * spacing_x * v1_unit + j * spacing_y * v2_unit
             points.append(point)
 
     return np.array(points)
